@@ -1,0 +1,249 @@
+/*
+ * 檔案用途：group-buy 頁面專屬樣式。
+ *
+ * .stat-card 系列跟 dashboard.scss 裡的定義概念一致（三張卡片橫向排列），
+ * 但 Angular 元件樣式預設是各自 scoped 的（ViewEncapsulation.Emulated），
+ * 不會跨元件套用，所以這裡重新定義一份，不是複製貼上偷懶——這是兩個
+ * 元件各自獨立維護樣式的必然結果。
+ */
+:host {
+  display: block;
+}
+
+.stat-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.stat-label {
+  font-size: var(--t-sm);
+  color: #6b7280;
+  margin: 0 0 0.35rem;
+}
+
+.stat-value {
+  font-size: 1.9rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.stat-hint {
+  font-size: var(--t-xs);
+  color: #9ca3af;
+  margin: 0.35rem 0 0;
+}
+
+/* 毛利率彙總（僅管理層）：沿用 .stat-card，只補區塊標題與模擬資料備註的間距。 */
+.margin-summary {
+  margin: 0 0 1.5rem;
+}
+
+.margin-summary__title {
+  margin: 0;
+  font-size: var(--t-base);
+}
+
+.margin-summary .stat-card-grid {
+  margin: 0.75rem 0 0;
+}
+
+.margin-summary__note {
+  margin-top: 0.5rem;
+}
+
+/*
+ * 彙總圖表（2026-09-23 分支整併）：卡片外觀沿用上方 .stat-card 的邊框／圓角，
+ * 兩張圖並排，窄螢幕自動改為上下堆疊。
+ */
+.chart-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.chart-panel {
+  background: #fff;
+  border: 1px solid #e1e4e8;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  min-width: 0;
+}
+
+.chart-panel__title {
+  margin: 0 0 0.75rem;
+  font-size: var(--t-base);
+}
+
+.chart-panel__empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: var(--t-sm);
+}
+
+.type-rate-chart-wrap,
+.result-chart-wrap {
+  position: relative;
+  height: 280px;
+}
+
+.result-chart-wrap {
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.csv-headers {
+  margin: 0.75rem 0;
+  font-size: var(--t-sm);
+
+  summary {
+    cursor: pointer;
+    color: #2563eb;
+  }
+
+  code {
+    display: block;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: #f3f4f6;
+    border-radius: 6px;
+    word-break: break-all;
+    font-size: var(--t-xs);
+  }
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.helper {
+  font-size: var(--t-xs);
+  color: #6b7280;
+}
+
+.importing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.75rem 0;
+  padding: 0.7rem 0.9rem;
+  color: #38536a;
+  background: #eef4f8;
+  border: 1px solid #dce6ed;
+  border-radius: 0.5rem;
+  font-size: var(--t-xs);
+}
+
+.spinner {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  border: 2px solid #ccd8e1;
+  border-top-color: var(--c-brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/*
+ * 以下這些 class 原本在 HTML 裡被使用，卻完全沒有對應的 CSS 規則——
+ * 沒有版面配置，元素會直接擠在一起變成零間距；徽章沒有配色，
+ * 會顯示成毫無視覺區隔的純文字。查證後補上。
+ */
+
+.filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid #e0e8ee;
+  border-radius: 0.8rem;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: var(--t-xs);
+    font-weight: 700;
+    color: #38536a;
+  }
+
+  input,
+  select {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid #d4dee6;
+    border-radius: 0.4rem;
+    font-size: var(--t-sm);
+  }
+
+  /* select 沿用 product-management.scss 篩選下拉的設計語彙（同一色系、
+   * 同一 focus 邊框顏色），讓兩個頁面的篩選介面視覺一致。 */
+  select {
+    min-width: 10rem;
+    height: 2.55rem;
+    background: #f8fafc;
+    color: #1f2937;
+    appearance: auto;
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: none;
+      border-color: var(--c-brand);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(28, 82, 134, 0.15);
+    }
+  }
+
+  .helper {
+    align-self: center;
+    color: #6c7a89;
+    font-size: var(--t-xs);
+  }
+}
+
+/*
+ * 表格版面（2026-09-23 起只剩匯入錯誤清單使用；逐筆紀錄表格已改為圖表）
+ * ——沿用 shared/_components.scss 的 .data-table 外觀（背景、
+ * 邊框、hover 等），但寬度改在這裡（元件層級）覆寫，不動全域檔案：
+ * .data-table 同時也被 settings.html 用，兩邊欄位結構完全不同，寬度
+ * 規則寫在全域會波及到不相干的頁面。Angular 元件樣式預設是 scoped
+ * 的（ViewEncapsulation.Emulated），這裡寫 .data-table 只會套用到
+ * 這個元件自己 render 出來的表格，不會外流到 settings 頁。
+ *
+ * table-layout: fixed 讓欄寬不被長內容撐開，加上 th 原本共用樣式裡的
+ * white-space: nowrap 在這裡覆寫掉，內容（不管表頭或內文）超出欄寬時
+ * 就正常換行，不是被裁切看不到，也不是硬把欄位撐寬打亂其他欄。
+ */
+.data-table table {
+  table-layout: fixed;
+}
+
+.data-table th {
+  white-space: normal;
+}
+
+.data-table td {
+  overflow-wrap: break-word;
+}

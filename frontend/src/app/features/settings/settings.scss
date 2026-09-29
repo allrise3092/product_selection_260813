@@ -1,0 +1,864 @@
+/*
+ * 檔案用途：設定頁「專屬」樣式——分頁列、評估模式卡、管理區塊標頭、
+ * Modal 內的標籤列與雙欄配置。
+ *
+ * ## 這裡刻意不再有什麼
+ * 頁首、狀態列容器、卡片、表格、按鈕、表單欄位、狀態徽章、訊息區塊、
+ * 空狀態／骨架、Modal 外框、焦點環、sr-only 全部移到 src/styles/ 共用層。
+ * 這些樣式原本在本頁與其他 5~8 個頁面各寫一份，是 anyComponentStyle
+ * budget 被撐爆的主因。要調整它們請改 src/styles/_components.scss，
+ * 不要在這裡覆寫，否則又會回到各頁分歧的狀態。
+ *
+ * ## 顏色與尺寸一律走 var(--x)
+ * 不要再寫死 hex。色票定義在 src/styles/_tokens.scss。
+ */
+:host {
+  display: block;
+  min-width: 0;
+}
+
+/* ===================== 分頁列 ===================== */
+
+.tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-1);
+  margin-bottom: var(--s-4);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--c-border);
+  scrollbar-width: thin;
+}
+
+/* 分頁分組的細分隔線（評分／資料字典／檔期／帳號），2026-09-24 分頁增為 10 個後加入。 */
+.tab-divider {
+  flex: 0 0 1px;
+  align-self: center;
+  height: 1.25rem;
+  margin: 0 var(--s-1);
+  background: var(--c-border-strong);
+}
+
+.tabs button {
+  padding: 0.55rem 0.85rem;
+  color: var(--c-ink-soft);
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: var(--r-sm) var(--r-sm) 0 0;
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tabs button:hover {
+  background: var(--c-surface-hover);
+}
+
+.tabs button.active {
+  color: var(--c-brand);
+  background: var(--c-brand-tint);
+  border-bottom-color: var(--c-brand);
+}
+
+/* Demo 狀態切換鈕（僅 useMockData 模式顯示）。 */
+.state-bar button {
+  padding: 0.45rem 0.7rem;
+  color: var(--c-ink-soft);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: var(--t-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.state-bar button.active {
+  color: var(--c-surface);
+  background: var(--c-brand);
+  border-color: var(--c-brand);
+}
+
+.state-bar > div:last-child {
+  display: flex;
+  gap: var(--s-1);
+}
+
+/* 2026-09-29：「計分與判定參數」前往天氣連動（另一組側邊欄）的提示連結。 */
+.settings-cross-link {
+  margin: 0 0 var(--s-4);
+}
+
+/* 操作回饋 toast：沿用 .notice 外觀，只調整為不佔滿寬度的行內區塊。 */
+.status-toast {
+  justify-content: flex-start;
+}
+
+/* ===================== 評估模式 ===================== */
+
+.mode-intro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.mode-intro h2 {
+  margin: 0 0 0.25rem;
+  font-size: var(--t-xl);
+}
+
+.mode-intro p {
+  margin: 0.2rem 0 0;
+  color: var(--c-ink-muted);
+  font-size: var(--t-sm);
+}
+
+/* 「唯讀」標記。 */
+.mode-intro > span {
+  padding: 0.3rem 0.6rem;
+  color: var(--c-warn);
+  background: var(--c-warn-tint);
+  border-radius: var(--r-pill);
+  font-size: var(--t-xs);
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--s-4);
+}
+
+.mode-grid article {
+  position: relative;
+  padding: var(--s-4);
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-card);
+}
+
+/* 目前生效的模式：綠色框線 + 抬升陰影，一眼看出是哪一套。 */
+.mode-grid article.active {
+  border-color: #74af98;
+  box-shadow: var(--sh-raised);
+}
+
+.mode-grid article header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+
+.mode-grid h3 {
+  margin: 0.15rem 0;
+  font-size: var(--t-lg);
+}
+
+.mode-grid header span {
+  color: var(--c-ink-muted);
+  font-size: var(--t-xs);
+  font-weight: 800;
+}
+
+/* min-height 讓三張卡的權重清單起始高度一致，不會因說明長短而錯位。 */
+.mode-grid p {
+  min-height: 3.2em;
+  color: var(--c-ink-muted);
+  font-size: var(--t-sm);
+}
+
+.mode-grid dl {
+  display: grid;
+  gap: var(--s-1);
+  margin: var(--s-4) 0;
+}
+
+.mode-grid dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-2);
+  padding: 0.45rem 0.6rem;
+  background: var(--c-surface-sunken);
+  border-radius: var(--r-sm);
+}
+
+.mode-grid dt,
+.mode-grid dd {
+  font-size: var(--t-sm);
+}
+
+/* 權重數值等寬，三張卡縱向比對時位數會對齊。 */
+.mode-grid dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+/* 已停用的自訂因子：保留在權重表但不參與計分，淡化並加註。 */
+.mode-grid dl div.is-inactive {
+  color: var(--c-ink-muted);
+}
+
+.mode-grid dl div.is-inactive dd {
+  font-weight: 400;
+  text-decoration: line-through;
+}
+
+.mode-grid dl div.is-inactive small {
+  margin-left: var(--s-1);
+  font-size: var(--t-xs);
+}
+
+.current {
+  display: block;
+  padding: 0.45rem;
+  color: var(--c-ok);
+  background: var(--c-ok-tint);
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  font-weight: 700;
+  text-align: center;
+}
+
+/* ===================== 管理區塊標頭 ===================== */
+
+.management-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-4);
+}
+
+.management-head h2 {
+  margin: 0 0 0.25rem;
+  font-size: var(--t-xl);
+}
+
+.management-head p{
+  margin: 0;
+  color: var(--c-ink-muted);
+  font-size: var(--t-sm);
+}
+
+.settings-modal fieldset {
+  margin: var(--s-3) 0;
+  padding: var(--s-3);
+  border: 1px solid #dbe4ea;
+  border-radius: var(--r-md);
+}
+
+.settings-modal fieldset > button {
+  margin-top: var(--s-2);
+}
+
+/* 新增商品類型：大類 vs 小類 二選一，跟 .campaign-status-mode 同一套版面。 */
+.product-type-level {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  border: none;
+  padding: 0;
+  margin: 0 0 var(--s-3);
+}
+.product-type-level legend {
+  width: 100%;
+  margin-bottom: var(--s-1);
+  font-weight: 700;
+}
+.product-type-level .radio-option {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+  font-weight: normal;
+  white-space: nowrap;
+}
+.product-type-level .helper {
+  width: 100%;
+  margin: 0;
+}
+
+/* ===================== 目標區間 ===================== */
+
+.score-band-group + .score-band-group {
+  margin-top: var(--s-5);
+}
+
+.score-band-group-title {
+  margin: 0 0 var(--s-2);
+  font-size: var(--t-lg);
+}
+
+.score-band-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-bottom: var(--s-2);
+}
+
+.score-band-group-header .score-band-group-title {
+  margin: 0;
+}
+
+.score-band-create-form {
+  margin-bottom: var(--s-3);
+}
+
+.score-band-edit-grid {
+  display: flex;
+  gap: var(--s-3);
+}
+
+.score-band-edit-grid label {
+  display: block;
+  color: var(--c-ink-soft);
+  font-size: var(--t-xs);
+  font-weight: 700;
+}
+
+.score-band-edit-grid input,
+.score-band-edit-grid select {
+  display: block;
+  width: 100%;
+  margin-top: var(--s-1);
+  padding: 0.45rem 0.55rem;
+  background: var(--c-surface-sunken);
+  border: 1px solid #d4dee6;
+  border-radius: var(--r-sm);
+  font: inherit;
+}
+
+tr.is-editing {
+  background: var(--c-surface-alt);
+}
+
+tr.is-editing select {
+  display: block;
+  padding: 0.45rem 0.55rem;
+  background: var(--c-surface);
+  border: 1px solid #d4dee6;
+  border-radius: var(--r-sm);
+  font: inherit;
+}
+
+/* ===================== 權重編輯器 ===================== */
+
+.weight-editor {
+  display: grid;
+  gap: var(--s-2);
+  margin: var(--s-3) 0;
+  padding: var(--s-3);
+  background: var(--c-surface-sunken);
+  border-radius: var(--r-sm);
+}
+
+.weight-editor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+  color: var(--c-ink-soft);
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+/*
+ * 2026-09-20新增（自訂模式增刪因子）：checkbox＋文字放一組，數字輸入框
+ * 放另一邊，取代原本單一 <label> 直接當作 .weight-editor-row 的舊排版。
+ * min-width: 0 讓長標籤（例如「毛利率（已扣運費）」）能在 flex 容器裡正常
+ * 換行，不會把數字輸入框擠出畫面或撐開整列高度不一致。
+ */
+.weight-editor-row-label {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.weight-editor-row-label input[type='checkbox'] {
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+}
+
+.weight-editor-row-value {
+  flex-shrink: 0;
+  width: 5.5rem;
+  padding: 0.35rem 0.5rem;
+  text-align: right;
+  background: var(--c-surface);
+  border: 1px solid #d4dee6;
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.weight-editor-row-value:disabled {
+  color: var(--c-ink-soft);
+  background: var(--c-surface-sunken);
+  opacity: 0.6;
+}
+
+.weight-editor-total {
+  padding: var(--s-2);
+  color: var(--c-ok);
+  background: var(--c-ok-tint);
+  border-radius: var(--r-sm);
+  font-size: var(--t-sm);
+  font-weight: 800;
+  text-align: center;
+}
+
+/* 加總不是 100 時只變色提示，不擋輸入——依決議只在送出時擋。 */
+.weight-editor-total.is-invalid {
+  color: var(--c-danger);
+  background: var(--c-danger-tint);
+}
+
+.weight-editor-actions {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.weight-editor-actions .btn,
+.weight-editor-actions .btn-primary {
+  flex: 1;
+}
+
+.edit-weights-button {
+  width: 100%;
+  margin-top: var(--s-2);
+}
+
+/* 自訂因子／自訂屬性表單樣式 2026-09-24 移到 tabs/custom-extensions。 */
+
+/* ===================== 資料表格欄寬 ===================== */
+/*
+ * 這支元件裡有 7 個各自獨立的表格（風險選項／商品類型／節慶檔期／
+ * 目標區間 x2／演算法參數／帳號管理），全部共用全域的 .data-table
+ * 外觀，但彼此欄位結構完全不同，不能像單一表格那樣直接用
+ * col-name／col-status 這種通用名稱——同一個 class 在表格 A 是
+ * 「風險選項名稱」，在表格 B 卻可能是「帳號使用者名稱」，寬度需求
+ * 不一樣，硬共用只會兩邊都調不準。所以這裡每個表格的欄寬 class
+ * 都加上各自的字首（risk- / type- / campaign- / band-global- /
+ * band-override- / setting- / account-），彼此獨立，不互相影響。
+ *
+ * 沿用歷史銷售紀錄、品項管理同一套做法：table-layout: fixed + 百分比
+ * 寬度，內容超出欄寬時交給下面的換行規則處理，不做單行截斷。跟前兩個
+ * 頁面一樣，這些規則寫在元件自己的 scss 裡（Angular 元件樣式預設
+ * scoped），只會套用到這個元件渲染出來的 7 個表格，不會影響
+ * group-buy／product-management 頁面用到的同名 class。
+ */
+.data-table table {
+  table-layout: fixed;
+}
+
+.data-table th {
+  white-space: normal;
+}
+
+.data-table td {
+  overflow-wrap: break-word;
+}
+
+/*
+ * 操作／編輯欄一律靠右對齊：這 7 個表格最後一欄都是操作用按鈕
+ * （編輯、停用、刪除…），跟本頁其他偏「資料閱讀」的欄位性質不同，
+ * 統一靠右對齊除了視覺上更好辨識「這是操作區」，也讓按鈕跟表格
+ * 右邊界對齊、比較好點擊。.row-actions 是全域共用的 class（用來排
+ * 版按鈕間距），這裡只覆寫對齊方式，只影響這個元件渲染出來的表格，
+ * 不會動到 .row-actions 原本在其他地方的行為（目前只有這個頁面用到）。
+ * 表頭文字（如「操作」「狀態／操作」）一併靠右，跟底下的按鈕對齊，
+ * 兩者才會是同一個視覺區塊，不是表頭靠左、內容卻靠右的不一致狀態。
+ */
+.row-actions {
+  justify-content: flex-end;
+}
+
+.risk-col-actions,
+.type-col-status-actions,
+.band-global-col-actions,
+.band-override-col-actions,
+.setting-col-actions,
+.account-col-actions {
+  text-align: right;
+}
+
+/* 風險選項 */
+.risk-col-name {
+  width: 22%;
+}
+
+.risk-col-keywords {
+  width: 48%;
+}
+
+.risk-col-status {
+  width: 12%;
+}
+
+.risk-col-actions {
+  width: 18%;
+}
+
+/* 商品類型設定（「來源」欄已移除，空間分配給其餘三欄） */
+.type-col-name {
+  width: 35%;
+}
+
+.type-col-used {
+  width: 15%;
+}
+
+.type-col-status-actions {
+  width: 50%;
+}
+
+/* 目標區間－全域預設 */
+.band-global-col-factor {
+  width: 40%;
+}
+
+.band-global-col-bound {
+  width: 18%;
+}
+
+.band-global-col-actions {
+  width: 24%;
+}
+
+/* 目標區間－各商品類型覆寫（欄位比全域預設多一欄「商品類型」，
+   比例跟全域預設那組不共用，即使兩者都有「因子」「上下界」） */
+.band-override-col-type {
+  width: 24%;
+}
+
+.band-override-col-factor {
+  width: 24%;
+}
+
+.band-override-col-bound {
+  width: 16%;
+}
+
+.band-override-col-actions {
+  width: 20%;
+}
+
+/* 演算法參數 */
+.setting-col-param {
+  width: 52%;
+}
+
+.setting-col-value {
+  width: 22%;
+}
+
+.setting-col-updated {
+  width: 12%;
+}
+
+.setting-col-actions {
+  width: 14%;
+}
+
+/* 帳號管理
+   2026-09-27：原本五欄加總 110%（32+18+16+14+30），瀏覽器會等比例縮小每一欄，
+   操作欄實際只剩約 196px，放「（本人）」加兩顆按鈕就被擠到換行。改成加總 100%，
+   操作欄放大到 40%，並在下面的 .account-actions 禁止換行。 */
+.account-col-username {
+  width: 18%;
+}
+
+.account-col-name {
+  width: 18%;
+}
+
+.account-col-role {
+  width: 10%;
+}
+
+.account-col-status {
+  width: 14%;
+}
+
+.account-col-actions {
+  width: 40%;
+}
+
+/* 按鈕排在儲存格內層的容器，不把 <td> 本身設成 flex——<td> 變成 flex 後不再是
+   表格儲存格，高度不會跟整列一起撐開，底線會跟同一列其他欄位錯開。 */
+.account-actions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* ===================== 響應式 ===================== */
+
+@media (max-width: 760px) {
+  .mode-intro,
+  .management-head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .management-head .btn-primary {
+    width: 100%;
+  }
+
+  .state-bar > div:last-child {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tabs {
+    overflow-x: auto;
+  }
+
+  .tabs button {
+    flex: 0 0 auto;
+  }
+
+}
+
+/* ===== 商品分類階層顯示（大類/小類） ===== */
+.type-major-row td {
+  background: #f4f7f9;
+  border-top: 2px solid #d7e0e6;
+}
+.type-minor-row .type-minor-name {
+  padding-left: 2rem;
+  color: #38536a;
+}
+.type-minor-row .type-minor-name::before {
+  content: '└ ';
+  color: #9aabb8;
+}
+
+/* 大類展開／收合按鈕：預設收合，點擊切換該大類底下的小類是否顯示。 */
+.type-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+.type-toggle:disabled {
+  cursor: default;
+}
+.type-toggle-caret {
+  display: inline-block;
+  font-size: 0.7em;
+  color: #6b8299;
+  transition: transform 0.15s ease;
+}
+.type-toggle.is-expanded .type-toggle-caret {
+  transform: rotate(90deg);
+}
+.type-toggle:disabled .type-toggle-caret {
+  visibility: hidden;
+}
+.type-toggle-count {
+  color: #6b8299;
+  font-weight: normal;
+}
+
+/* ===== 評估模式卡片：擴大點擊範圍 ===== */
+.mode-grid article.is-selectable {
+  cursor: pointer;
+}
+.mode-grid article.is-selectable:hover {
+  border-color: #9db8cc;
+  box-shadow: 0 4px 14px rgba(28, 82, 134, 0.1);
+}
+
+/* ===== 風險關鍵字標籤區塊化（chip） ===== */
+.keyword-chip-input {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  background: #fff;
+  border: 1px solid #d4dee6;
+  border-radius: 0.4rem;
+}
+.keyword-chip-input input {
+  flex: 1;
+  min-width: 8rem;
+  padding: 0.3rem 0.2rem;
+  border: none;
+  outline: none;
+}
+.keyword-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+.keyword-chip-list.readonly {
+  margin-top: 0.2rem;
+}
+.keyword-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+  color: var(--c-brand);
+  background: var(--c-brand-tint);
+  border: 1px solid #b7d3ea;
+  border-radius: 999px;
+  font-size: var(--t-xs);
+  white-space: nowrap;
+}
+.keyword-chip.readonly {
+  color: #38536a;
+  background: #f0f4f7;
+  border-color: #dbe4ea;
+}
+.keyword-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+  line-height: 1;
+}
+.keyword-chip-remove:hover {
+  color: #b23b3b;
+}
+
+/* ===== 以下class原本用在HTML卻完全沒有對應樣式，補上 ===== */
+
+/* 演算法參數分頁：目前數值的顯示，原本只是純文字，跟旁邊的說明文字
+   字級一樣小，完全沒有視覺上的主次之分——這是使用者在讀「現在設定
+   是多少」這個關鍵數字時最重要的資訊，應該放大加粗，不是等同於旁邊
+   的輔助說明。
+
+   ⚠️ 但這個放大加粗的設計，前提是「值很短」（門檻、權重這類數字）。
+   後端目前設定裡有一筆 dataType 是 STRING 的例外——通路支援溫層
+   （supported_temperature_zones），值是逗號分隔的清單「NORMAL,
+   CHILLED,FROZEN」，套同一種放大粗體會在窄欄位裡換成三行特大字，
+   比旁邊的參數名稱還搶眼，反而是本末倒置。用 dataType 區分（而不是
+   用字串長度這種容易因資料變動而飄移的判斷依據）：STRING 型別用
+   正常字級／字重顯示，其餘（INTEGER／DECIMAL）維持原本放大強調。
+   未來如果後端新增其他 STRING 型設定，會自動套用同一套處理，不用
+   再一一加特例。 */
+.system-setting-value {
+  font-size: var(--t-lg);
+  font-weight: 650;
+  color: var(--c-brand, var(--c-brand));
+}
+
+.system-setting-value.is-text-value {
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+.unit {
+  margin-left: 0.3rem;
+  color: #6c7a89;
+  font-size: var(--t-xs);
+}
+.system-setting-edit-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+
+  input {
+    width: 8rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #d4dee6;
+    border-radius: 0.4rem;
+  }
+}
+
+/* 目標區間／貝氏收縮／趨勢分析／MOQ判定 這四個分類的滑桿編輯欄位。 */
+.system-setting-slider-field {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 22rem;
+
+  input[type='range'] {
+    flex: 1;
+    accent-color: var(--c-brand);
+  }
+}
+
+.system-setting-slider-manual {
+  width: 6rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid #d4dee6;
+  border-radius: 0.4rem;
+  color: var(--c-brand);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* 溫層判定：常溫／冷藏／冷凍三個固定選項的勾選方塊，跟關鍵字 chip
+   視覺呼應（都是「多選、可個別切換」的概念），但用 checkbox 而不是
+   自由輸入＋刪除鈕，因為選項是封閉集合，不需要新增/命名。 */
+.temperature-zone-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.checkbox-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  color: #38536a;
+  background: #f0f4f7;
+  border: 1px solid #d4dee6;
+  border-radius: 999px;
+  font-size: var(--t-sm);
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    accent-color: var(--c-brand);
+  }
+
+  &:has(input:checked) {
+    color: var(--c-brand);
+    background: var(--c-brand-tint);
+    border-color: #b7d3ea;
+    font-weight: 700;
+  }
+}
+
+.footer-actions {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.settings-page {
+  max-width: 1100px;
+  margin: 0 auto;
+}

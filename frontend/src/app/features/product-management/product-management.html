@@ -1,0 +1,441 @@
+<!--
+  檔案用途：品項管理主清單。
+  搜尋／篩選、狀態預覽、表格與 Empty／Loading／Error 皆維持同一 DOM 流程；表格在手機僅容器內捲動。
+-->
+<main class="product-page" aria-labelledby="page-title">
+  <header class="page-header">
+    <div>
+
+      <h1 id="page-title">品項管理</h1>
+    </div>
+    <div class="header-actions">
+      <!-- 2026-09：匯出「目前篩選條件＋審核通過」的全部商品（後端全量，不受分頁限制）。
+           審核狀態選「未審核／審核拒絕」時停用，避免誤以為會匯出那些商品。 -->
+      <button type="button" class="secondary-action" (click)="exportCsv()" [disabled]="!canExport()"
+        [attr.aria-busy]="isExporting()" [attr.title]="exportDisabledReason()">
+        <span aria-hidden="true">⇩</span> {{ isExporting() ? '匯出中…' : '匯出 CSV' }}
+      </button>
+      <a class="secondary-action" routerLink="/products/batch-import"><span aria-hidden="true">⇪</span> 批次新增選品</a>
+      <a class="primary-action" routerLink="/products/new"><span aria-hidden="true">＋</span> 新增品項</a>
+    </div>
+  </header>
+
+  @if (useMockData) {
+  <section class="state-preview" aria-labelledby="state-title">
+    <div>
+      <strong id="state-title">UI 狀態預覽</strong><span>用於 Demo 驗證四大狀態，不會呼叫後端。</span>
+    </div>
+    <div class="state-actions" role="group" aria-label="切換 UI 狀態">
+      @for (state of stateOptions; track state) {
+      <button type="button" [class.active]="pageState() === state" [attr.aria-pressed]="pageState() === state"
+        (click)="setPageState(state)">
+        {{
+        state === 'locked'
+        ? 'Disabled／Locked'
+        : state === 'loading'
+        ? 'Loading／Pending'
+        : state
+        }}
+      </button>
+      }
+    </div>
+  </section>
+  }
+  <!--
+    ⚠️ 修正：原本只用 aria-live 的隱藏元素承載 statusMessage()，
+    CSS 的 .sr-status 是視覺完全隱藏的樣式，代表刪除／重審等操作
+    不管成功或失敗，一般使用者完全看不到任何回饋——這正是「點擊確認
+    但看起來沒反應」的根本原因：不是操作沒執行，是執行結果沒有可見提示。
+    保留 aria-live 給螢幕閱讀器，另外加一個看得到的提示同時存在。
+  -->
+  <p class="sr-status" aria-live="polite">{{ statusMessage() }}</p>
+  @if (statusMessage()) {
+  <p class="notice status-toast" role="status">{{ statusMessage() }}</p>
+  }
+
+  @if (hasLoadError()) {
+  <section class="notice error-notice" role="alert">
+    <div>
+      <strong>無法載入品項資料</strong>
+      <span>{{
+        useMockData ? '這是本地 UI 錯誤狀態，未發送網路請求。' : statusMessage()
+        }}</span>
+    </div>
+    <button type="button" (click)="retryLoad()">重試</button>
+  </section>
+  } @else {
+  <section class="filter-panel" aria-labelledby="filter-title">
+    <div class="filter-heading">
+      <div>
+        <h2 id="filter-title">搜尋與篩選</h2>
+      </div>
+    </div>
+    <!-- 2026-09-26 版面整理（方案 A）：常用條件一列；其餘收進「進階篩選」。
+         條件邏輯不變（清單與匯出共用 currentFilterQuery()），只調整呈現方式。 -->
+    <div class="filter-grid filter-grid--primary">
+      <div class="field search-field">
+        <label for="product-search">關鍵字搜尋</label><input id="product-search" type="search" placeholder="搜尋商品或供應商名稱"
+          [ngModel]="searchTerm()" (ngModelChange)="updateSearch($event)" />
+      </div>
+      <div class="field">
+        <label for="review-filter">審核狀態</label><select id="review-filter" [ngModel]="reviewFilter()"
+          (ngModelChange)="updateReviewFilter($event)" [disabled]="isLoading()">
+          <option value="ALL">全部</option>
+          <option value="PENDING">未審核</option>
+          <option value="APPROVED">審核通過</option>
+          <option value="REJECTED">審核拒絕</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="item-filter">品項狀態</label><select id="item-filter" [ngModel]="itemFilter()"
+          (ngModelChange)="updateItemFilter($event)" [disabled]="isLoading()">
+          <option value="ALL">全部</option>
+          <option value="ACTIVE">使用中</option>
+          <option value="ARCHIVED">已封存</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="type-filter">商品分類</label><select id="type-filter" [ngModel]="productTypeFilter()"
+          (ngModelChange)="updateProductTypeFilter($event)" [disabled]="isLoading()">
+          <option value="ALL">全部分類</option>
+          @for (group of groupedProductTypes(); track group.major.id) {
+          <optgroup [label]="group.major.name">
+            @for (minor of group.minors; track minor.id) {
+            <option [value]="minor.name">{{ minor.name }}</option>
+            }
+          </optgroup>
+          }
+        </select>
+      </div>
+      <div class="filter-actions">
+        <button type="button" class="advanced-toggle" (click)="toggleAdvancedFilters()"
+          [attr.aria-expanded]="advancedFiltersOpen()" aria-controls="advanced-filters">
+          進階篩選
+          @if (advancedFilterChips().length > 0) {
+          <span class="advanced-count" aria-label="已套用 {{ advancedFilterChips().length }} 個進階條件">{{
+            advancedFilterChips().length }}</span>
+          }
+          <span aria-hidden="true">{{ advancedFiltersOpen() ? '▴' : '▾' }}</span>
+        </button>
+        <button type="button" class="clear-button" (click)="clearFilters()"
+          [disabled]="!hasActiveFilters() || isLoading()">
+          清除篩選
+        </button>
+      </div>
+    </div>
+
+    @if (advancedFiltersOpen()) {
+    <div id="advanced-filters" class="advanced-filters" role="group" aria-label="進階篩選">
+      <fieldset class="advanced-group">
+        <legend>時間</legend>
+        <div class="field">
+          <span class="field-label" id="updated-range-label">修改時間</span>
+          <span class="date-range" role="group" aria-labelledby="updated-range-label">
+            <input id="updated-from" type="date" aria-label="修改時間（起）" [ngModel]="updatedFromDraft()"
+              (ngModelChange)="updateUpdatedFrom($event)" [disabled]="isLoading()" [max]="updatedToDraft() || undefined" />
+            <span aria-hidden="true">～</span>
+            <input id="updated-to" type="date" aria-label="修改時間（訖）" [ngModel]="updatedToDraft()"
+              (ngModelChange)="updateUpdatedTo($event)" [disabled]="isLoading()" [min]="updatedFromDraft() || undefined" />
+          </span>
+        </div>
+        <div class="field">
+          <span class="field-label" id="reviewed-range-label">審核日期</span>
+          <span class="date-range" role="group" aria-labelledby="reviewed-range-label">
+            <input id="reviewed-from" type="date" aria-label="審核日期（起）" [ngModel]="reviewedFromDraft()"
+              (ngModelChange)="updateReviewedFrom($event)" [disabled]="isLoading()"
+              [max]="reviewedToDraft() || undefined" [attr.aria-invalid]="reviewedDateRangeInvalid()" />
+            <span aria-hidden="true">～</span>
+            <input id="reviewed-to" type="date" aria-label="審核日期（訖）" [ngModel]="reviewedToDraft()"
+              (ngModelChange)="updateReviewedTo($event)" [disabled]="isLoading()" [min]="reviewedFromDraft() || undefined"
+              [attr.aria-invalid]="reviewedDateRangeInvalid()" />
+          </span>
+        </div>
+      </fieldset>
+      <!-- 送審批次／未曾匯出（V25）：主要搭配「匯出 CSV」挑出要交接的商品，同時也套用在清單上。 -->
+      <fieldset class="advanced-group">
+        <legend>送審與匯出</legend>
+        <div class="field">
+          <label for="batch-filter">送審批次</label><select id="batch-filter" [ngModel]="submissionBatchFilter()"
+            (ngModelChange)="updateSubmissionBatchFilter($event)" [disabled]="isLoading()">
+            <option value="ALL">全部批次</option>
+            @for (batch of submissionBatches(); track batch.batchId) {
+            <option [value]="batch.batchId">{{ batchOptionLabel(batch) }}</option>
+            }
+          </select>
+        </div>
+        <label class="field-checkbox">
+          <input type="checkbox" [ngModel]="neverExportedFilter()" (ngModelChange)="updateNeverExported($event)"
+            [disabled]="isLoading()" />
+          只看未曾匯出
+        </label>
+        <label class="field-checkbox">
+          <input type="checkbox" [ngModel]="createdByMeFilter()" (ngModelChange)="updateCreatedByMe($event)"
+            [disabled]="isLoading()" />
+          只看我建立的
+        </label>
+      </fieldset>
+    </div>
+    } @else if (advancedFilterChips().length > 0) {
+    <!-- 收合時列出生效中的進階條件，可單獨移除（展開時欄位本身就看得到，不重複列出）。 -->
+    <ul class="filter-chips" aria-label="已套用的進階條件">
+      @for (chip of advancedFilterChips(); track chip.key) {
+      <li>
+        <span>{{ chip.label }}</span>
+        <button type="button" [attr.aria-label]="'移除條件：' + chip.label" [disabled]="isLoading()"
+          (click)="clearAdvancedFilter(chip.key)">×</button>
+      </li>
+      }
+    </ul>
+    }
+    @if (reviewedDateRangeInvalid()) {
+    <p class="filter-hint" role="alert">審核日期起日晚於訖日，暫不套用審核日期條件。</p>
+    }
+    @if (exportBlockedByReviewFilter()) {
+    <p class="filter-hint">「匯出 CSV」只匯出審核通過的商品；目前的審核狀態篩選下無法匯出。</p>
+    }
+  </section>
+
+  <section class="list-panel" aria-labelledby="list-title" [attr.aria-busy]="isLoading()">
+    <header class="list-header">
+      <div>
+        <h2 id="list-title">正式候選品項</h2>
+        <!--
+          ⚠️ 修正：candidateProducts().length 只是「目前這一頁」的資料筆數
+          （真實模式下 load() 只把當頁 result.items 塞進 products signal，
+          上限就是 pageSize），不是後端回傳的真正總數 totalElements。
+          改讀 totalElements()，並在表格下方補上分頁控制項（見下方 totalPages()
+          區塊），否則使用者永遠只看得到第 1 頁、也無從得知真正總數。
+        -->
+        <p aria-live="polite">
+          顯示 <strong>{{ isLoading() ? '—' : sortedProducts().length }}</strong> 筆／共
+          <strong>{{ isLoading() ? '—' : totalElements() }}</strong> 筆
+        </p>
+      </div>
+    </header>
+    @if (isLoading()) {
+    <div class="loading-status" role="status" aria-live="polite">
+      <span class="spinner" aria-hidden="true"></span>正在載入品項資料…
+    </div>
+    <div class="skeleton-table" aria-hidden="true">
+      @for (row of [1, 2, 3, 4, 5]; track row) {
+      <div class="skeleton-row">
+        @for (cell of [1, 2, 3, 4, 5, 6]; track cell) {
+        <span></span>
+        }
+      </div>
+      }
+    </div>
+    } @else if (candidateProducts().length === 0) {
+    <div class="empty-state">
+      <app-icon name="inbox" />
+      <h3>目前沒有正式候選品項</h3>
+      <p>可新增品項，或從獨立 AI 建議清單加入候選。</p>
+      <button type="button" (click)="retryLoad()">{{ useMockData ? '恢復 Demo 資料' : '重新整理' }}</button>
+    </div>
+    } @else if (filteredProducts().length === 0) {
+    <div class="empty-state no-results">
+      <app-icon name="search" />
+      <h3>找不到符合條件的品項</h3>
+      <p>請調整搜尋或篩選條件。</p>
+      <button type="button" (click)="clearFilters()">清除篩選</button>
+    </div>
+    } @else {
+    <app-list-sort class="mobile-table-sort" [sort]="productSort" [choices]="productSortChoices" label="品項管理" />
+    <div class="table-wrap" tabindex="0" aria-label="正式候選商品清單，可水平捲動">
+      <table>
+        <caption class="visually-hidden">
+          正式候選商品清單
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col" class="col-name" appSortHeader="name" [sort]="productSort">商品名稱</th>
+            <th scope="col" class="col-type">實際分類</th>
+            <th scope="col" class="col-pricing" appSortHeader="pricingType" [sort]="productSort">新品／再販售</th>
+            <th scope="col" class="col-supplier" appSortHeader="supplierName" [sort]="productSort">供應商</th>
+            <th scope="col" class="col-score" appSortHeader="finalScore" [sort]="productSort">分數</th>
+            <th scope="col" class="col-completeness" appSortHeader="dataCompleteness" [sort]="productSort">資料完整度</th>
+            <th scope="col" class="col-status">審核／品項狀態</th>
+            <th scope="col" class="col-updated" appSortHeader="updatedAt:date" [sort]="productSort">更新時間</th>
+            <th scope="col" class="actions-column">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (product of sortedProducts(); track product.id) {
+          <tr [class.locked-row]="product.reviewStatus === 'APPROVED'"
+            [class.archived-row]="product.itemStatus === 'ARCHIVED'">
+            <td class="product-cell">
+              <strong [title]="product.name">{{ product.name }}</strong><span>#{{ product.id }}</span>
+              @if (product.reviewStatus === 'APPROVED') {
+              <small class="lock-note"><app-icon name="lock" size="sm" /> 核心選品資料已鎖定</small>
+              }
+            </td>
+            <td>
+              <!-- 懸停 1 秒以上才顯示品類說明（純 CSS transition-delay 實現，
+                         不用 JS 計時器）；沒有說明文字的品類不會渲染這個提示框，
+                         不是顯示一個空白的框。tabindex 讓鍵盤使用者也能透過
+                         focus 觸發，不是只有滑鼠使用者才看得到說明。 -->
+              <strong class="type-hover"
+                [class.has-tooltip]="productTypeDescriptions().has(product.productTypeId ?? -1)"
+                [attr.tabindex]="productTypeDescriptions().has(product.productTypeId ?? -1) ? 0 : null">{{
+                product.productTypeName
+                }}@if (productTypeDescriptions().has(product.productTypeId ?? -1)) {
+                <span class="type-tooltip">{{ productTypeDescriptions().get(product.productTypeId ?? -1) }}</span>
+                }</strong>
+            </td>
+            <td>
+              <span class="pricing-badge" [attr.data-type]="product.pricingType">{{
+                pricingTypeLabel(product.pricingType)
+                }}</span>
+            </td>
+            <td class="supplier-cell" [title]="product.supplierName">
+              {{ product.supplierName }}
+            </td>
+            <td>
+              <!-- ⚠️ 一定要先判斷 hasScore()：這是「後端有沒有提供欄位」，
+                         不是「這筆商品有沒有分數」。後端已在清單端點併帶
+                         finalScore/dataCompleteness，但某筆商品若尚無評估紀錄，
+                         兩者仍可能是 null——isDataIncomplete() 內部已對 null
+                         做過防呆（回傳 false），不會誤報「資料待補」。 -->
+              @if (!hasScore(product)) {
+              <span class="score unavailable">—</span><small class="score-note">清單未提供分數</small>
+              } @else if (product.finalScore === null) {
+              <span class="score unavailable">—</span><small class="score-note">尚無評估紀錄</small>
+              } @else if (isIncomplete(product)) {
+              <span class="score unavailable">—</span><small class="score-note">待補齊後評分</small>
+              } @else {
+              <strong class="score">{{ product.finalScore }}</strong>
+              }
+            </td>
+            <td>
+              @if (!hasScore(product) || product.dataCompleteness === null) {
+              <!-- product.dataCompleteness === null：欄位存在但這筆商品
+                           尚無評估紀錄，不能顯示成「null%」，維持「—」。 -->
+              <span class="unavailable">—</span>
+              } @else {
+              <div class="completeness-cell" [class.incomplete]="isIncomplete(product)">
+                <div>
+                  <strong>{{ product.dataCompleteness }}%</strong><span>{{ isIncomplete(product) ? '資料待補' : '資料完整'
+                    }}</span>
+                </div>
+                <div class="progress-track" role="progressbar" aria-label="資料完整度" aria-valuemin="0" aria-valuemax="100"
+                  [attr.aria-valuenow]="product.dataCompleteness">
+                  <span [style.width.%]="product.dataCompleteness"></span>
+                </div>
+                @if (isIncomplete(product)) {
+                <small>不進入評估計分與 AI 推薦</small>
+                }
+              </div>
+              }
+            </td>
+            <td class="status-column">
+              <div class="status-stack">
+                <span class="status" [attr.data-status]="product.reviewStatus"><i aria-hidden="true"></i>{{
+                  reviewStatusLabel(product.reviewStatus) }}</span><span class="item-status">{{
+                  itemStatusLabel(product.itemStatus) }}</span>
+                @if (product.reviewStatus === 'APPROVED') {
+                }
+              </div>
+            </td>
+            <td class="date-cell">
+              {{ product.updatedAt | date: 'yyyy/MM/dd'
+              }}<span>{{ product.updatedAt | date: 'HH:mm' }}</span>
+            </td>
+            <td class="actions-column">
+              <div class="action-group">
+                <!-- REJECTED 且必須 ACTIVE：已封存的要先復用，後端會以 409 擋下 -->
+                @if (product.actions.canResubmit) {
+                <a class="text-action resubmit" [routerLink]="['/products', product.id, 'edit']">重審</a>
+                } @else if (product.itemStatus === 'ARCHIVED') {
+                <button type="button" class="text-action" disabled title="已封存品項須先復用">
+                  編輯
+                </button>
+                } @else {
+                <a class="text-action" [routerLink]="['/products', product.id, 'edit']">編輯</a>
+                }
+                <a class="text-action" [routerLink]="['/products', product.id]">查看</a>
+                <button type="button" class="text-action danger" [disabled]="!product.actions.canDelete" [title]="
+                          product.actions.canDelete
+                            ? (useMockData ? '從本地 Mock 清單刪除' : '刪除此品項')
+                            : deleteDisabledReason(product)
+                        " [attr.aria-label]="
+                          product.actions.canDelete
+                            ? '刪除' + product.name
+                            : '無法刪除' + product.name + '：' + deleteDisabledReason(product)
+                        " (click)="requestDelete(product)">
+                  刪除
+                </button>
+                @if (!product.actions.canDelete) {
+                <small class="disabled-reason">{{ deleteDisabledReason(product) }}</small>
+                }
+              </div>
+            </td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (totalPages() > 1) {
+    <!-- 分頁控制項：totalElements()／totalPages() 由 load() 正確設值，
+         但先前沒有任何畫面元素讀取，使用者完全無法翻頁，只看得到第 1 頁。 -->
+    <nav class="pagination" aria-label="分頁">
+      <button type="button" (click)="goToPage(pageNumber() - 1)" [disabled]="pageNumber() === 0 || isLoading()">
+        上一頁
+      </button>
+      <span aria-live="polite">第 {{ pageNumber() + 1 }} 頁／共 {{ totalPages() }} 頁</span>
+      <button type="button" (click)="goToPage(pageNumber() + 1)"
+        [disabled]="pageNumber() >= totalPages() - 1 || isLoading()">
+        下一頁
+      </button>
+    </nav>
+    }
+    }
+  </section>
+  }
+
+  @if (dialogMode()) {
+  <div class="dialog-backdrop" role="presentation">
+    <section class="alert-dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title"
+      (click)="$event.stopPropagation()">
+      <span class="dialog-icon" aria-hidden="true">
+        @if (dialogMode() === 'delete') {
+        <app-icon name="alert-triangle" />
+        } @else if (dialogMode() === 'resubmit') {
+        <app-icon name="refresh-cw" />
+        } @else {
+        <app-icon name="info" />
+        }
+      </span>
+      <h2 id="dialog-title">
+        {{
+        dialogMode() === 'delete'
+        ? (useMockData ? '確認移除 Mock 品項？' : '確認刪除此品項？')
+        : dialogMode() === 'resubmit'
+        ? (useMockData ? '模擬編輯並重審？' : '確認重審？')
+        : '功能範圍提示'
+        }}
+      </h2>
+      <p>
+        {{
+        dialogMode() === 'notice'
+        ? statusMessage()
+        : useMockData
+        ? '這項操作只會更新本地 Mock 資料，不會呼叫後端 API。'
+        : dialogMode() === 'delete'
+        ? '刪除後無法復原，確定要刪除這筆品項嗎？'
+        : '確認後會將此品項狀態改回未審核，需要重新走一次選品審核流程。'
+        }}
+      </p>
+      <div class="dialog-actions">
+        @if (dialogMode() !== 'notice') {
+        <button type="button" class="secondary-action" (click)="closeDialog()">取消</button><button type="button"
+          class="confirm-action" (click)="dialogMode() === 'delete' ? confirmDelete() : confirmResubmit()">
+          確認
+        </button>
+        } @else {
+        <button type="button" class="confirm-action" (click)="closeDialog()">我知道了</button>
+        }
+      </div>
+    </section>
+  </div>
+  }
+</main>

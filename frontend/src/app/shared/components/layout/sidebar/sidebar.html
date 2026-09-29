@@ -1,0 +1,114 @@
+<!-- 檔案用途：側邊導覽；active 狀態協助使用者辨認所在頁面，角色隱藏不等於後端權限。
+
+     功能圖示統一用共用的 app-icon（見 shared/components/icon），不要在
+     這裡各自刻一份 SVG——app-icon 已經涵蓋這裡需要的全部圖案。
+     例外只有品牌標記（實心菱形，app-icon 是描邊風格，兩者混在一起會很
+     突兀，維持原本的填色 SVG）跟關閉按鈕（純裝飾用的 X，沒有共用需求）。
+-->
+<aside class="sidebar" [class.is-open]="isOpen" aria-label="主要導覽">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+        <path
+          d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"
+        />
+      </svg>
+    </span>
+    <div>
+      <strong>選品決策</strong>
+    </div>
+
+    <button
+      type="button"
+      class="close-button"
+      aria-label="關閉導覽選單"
+      (click)="closeRequested.emit()"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M18 6 6 18" />
+        <path d="m6 6 12 12" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- 2026-09-26：必須先修改密碼時整個導覽鎖定（淡灰色、不可點取），見 sidebar.ts 的 locked。 -->
+  @if (locked) {
+    <p class="locked-notice" role="status">請先修改密碼，完成後即可使用其他功能。</p>
+  }
+  <nav class="navigation" aria-label="後台功能" [class.is-locked]="locked" [attr.inert]="locked ? '' : null"
+    [attr.aria-disabled]="locked ? 'true' : null">
+    <p class="nav-label">工作區</p>
+
+    <a
+      routerLink="/dashboard"
+      routerLinkActive="active"
+      [routerLinkActiveOptions]="{ exact: true }"
+      (click)="closeRequested.emit()"
+    >
+      <span class="nav-icon"><app-icon name="layout-dashboard" size="md" /></span>
+      儀表板
+    </a>
+
+    <!-- 2026-09-24 職責分離：品項管理、AI 建議清單只給操作層；選品審核、設定
+         只給管理層。儀表板與歷史銷售紀錄兩邊都有，內容依角色各自呈現。 -->
+    @if (!isManager) {
+      <a
+        routerLink="/products"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="closeRequested.emit()"
+      >
+        <span class="nav-icon"><app-icon name="list" size="md" /></span>
+        品項管理
+      </a>
+
+      <a
+        routerLink="/products/ai-suggestions"
+        routerLinkActive="active"
+        (click)="closeRequested.emit()"
+      >
+        <span class="nav-icon"><app-icon name="sparkles" size="md" /></span>
+        AI 建議清單
+      </a>
+    }
+
+    <a routerLink="/group-buy" routerLinkActive="active" (click)="closeRequested.emit()">
+      <span class="nav-icon"><app-icon name="clipboard-list" size="md" /></span>
+      歷史銷售紀錄
+    </a>
+
+    @if (isManager) {
+      <a routerLink="/review" routerLinkActive="active" (click)="closeRequested.emit()">
+        <span class="nav-icon"><app-icon name="check-circle" size="md" /></span>
+        選品審核
+      </a>
+
+      <p class="nav-label nav-label-spaced">管理</p>
+
+      <!-- 2026-09-29 依用途分三組（原本依異動頻率分兩組）：規則、資料、系統各回答一個問題，
+           分組定義見 features/settings/settings-groups.ts。舊的 /settings?tab= 與
+           /settings/operations 連結會依分頁自動轉到所屬的組。 -->
+      <a routerLink="/settings/scoring" routerLinkActive="active" (click)="closeRequested.emit()">
+        <span class="nav-icon"><app-icon name="sliders-horizontal" size="md" /></span>
+        評分與審核規則
+      </a>
+
+      <a routerLink="/settings/data" routerLinkActive="active" (click)="closeRequested.emit()">
+        <span class="nav-icon"><app-icon name="database" size="md" /></span>
+        選品基礎資料
+      </a>
+
+      <a routerLink="/settings/system" routerLinkActive="active" (click)="closeRequested.emit()">
+        <span class="nav-icon"><app-icon name="settings" size="md" /></span>
+        系統管理
+      </a>
+    }
+  </nav>
+
+  @if (useMockData) {
+    <div class="sidebar-footer">
+      <span class="status-dot" aria-hidden="true"></span>
+      Demo 模式 · 目前顯示示範資料
+    </div>
+  }
+</aside>
